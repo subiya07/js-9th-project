@@ -4,9 +4,10 @@ const progressBar = document.querySelector(".progress-bar"),
 
 // Function to update progress bar based on time remaining
 const progress = (value) => {
-  const percentage = (value / time) * 100; // Calculate percentage
-  progressBar.style.width = `${percentage}%`; // Update progress bar width
-  progressText.innerHTML = `${value}`; // Display time remaining
+  const percentage = (value / time) * 100;
+  progressBar.style.width = `${percentage}%`;
+  progressText.innerHTML = `${value}`;
+  console.log(`Progress updated: ${value}s left (${percentage.toFixed(2)}%)`);
 };
 
 // Selecting necessary elements for quiz functionality
@@ -19,38 +20,37 @@ const startBtn = document.querySelector(".start"),
   startScreen = document.querySelector(".start-screen");
 
 // Declaring global variables
-let questions = [], // Array to store quiz questions
-  time = 30, // Default time per question
-  score = 0, // Player's score
-  currentQuestion, // Track current question number
-  timer; // Timer variable
+let questions = [],
+  time = 30,
+  score = 0,
+  currentQuestion,
+  timer;
 
 // Function to start the quiz
 const startQuiz = () => {
-  const num = numQuestions.value, // Get number of questions from input
-    cat = category.value, // Get selected category
-    diff = difficulty.value; // Get selected difficulty level
+  const num = numQuestions.value,
+    cat = category.value,
+    diff = difficulty.value;
 
-  loadingAnimation(); // Show loading animation
+  console.log(`Starting quiz with ${num} questions in ${cat} category at ${diff} difficulty`);
+  loadingAnimation();
 
-  // API URL to fetch questions based on user selection
   const url = `https://opentdb.com/api.php?amount=${num}&category=${cat}&difficulty=${diff}&type=multiple`;
 
-  // Fetch questions from API
   fetch(url)
     .then((res) => res.json())
     .then((data) => {
-      questions = data.results; // Store fetched questions
+      questions = data.results;
+      console.log("Fetched questions:", questions);
       setTimeout(() => {
-        startScreen.classList.add("hide"); // Hide start screen
-        quiz.classList.remove("hide"); // Show quiz screen
-        currentQuestion = 1; // Set current question to first one
-        showQuestion(questions[0]); // Display first question
+        startScreen.classList.add("hide");
+        quiz.classList.remove("hide");
+        currentQuestion = 1;
+        showQuestion(questions[0]);
       }, 1000);
     });
 };
 
-// Event listener to start quiz when the start button is clicked
 startBtn.addEventListener("click", startQuiz);
 
 // Function to display a question
@@ -60,18 +60,15 @@ const showQuestion = (question) => {
 
   questionNumber = document.querySelector(".number");
 
-  questionText.innerHTML = question.question; // Display question text
+  console.log(`Showing Question ${questions.indexOf(question) + 1}: ${question.question}`);
 
-  // Create an array with correct and incorrect answers
-  const answers = [
-    ...question.incorrect_answers,
-    question.correct_answer.toString(),
-  ];
+  questionText.innerHTML = question.question;
 
-  answersWrapper.innerHTML = ""; // Clear previous answers
-  answers.sort(() => Math.random() - 0.5); // Shuffle answers
+  const answers = [...question.incorrect_answers, question.correct_answer.toString()];
+  answers.sort(() => Math.random() - 0.5);
 
-  // Display each answer as a selectable option
+  answersWrapper.innerHTML = "";
+
   answers.forEach((answer) => {
     answersWrapper.innerHTML += `
       <div class="answer">
@@ -83,41 +80,40 @@ const showQuestion = (question) => {
     `;
   });
 
-  // Display question number
   questionNumber.innerHTML = ` Question <span class="current">${questions.indexOf(question) + 1
-    }</span>
-    <span class="total">/${questions.length}</span>`;
+    }</span> <span class="total">/${questions.length}</span>`;
 
-  // Add event listener to each answer option
   const answersDiv = document.querySelectorAll(".answer");
   answersDiv.forEach((answer) => {
     answer.addEventListener("click", () => {
       if (!answer.classList.contains("checked")) {
         answersDiv.forEach((answer) => {
-          answer.classList.remove("selected"); // Remove previous selection
+          answer.classList.remove("selected");
         });
-        answer.classList.add("selected"); // Highlight selected answer
-        submitBtn.disabled = false; // Enable submit button
+        answer.classList.add("selected");
+        submitBtn.disabled = false;
+        console.log(`Selected answer: ${answer.querySelector(".text").innerHTML}`);
       }
     });
   });
 
-  // Set time for the question and start countdown
   time = timePerQuestion.value;
   startTimer(time);
 };
 
 // Function to start the countdown timer
 const startTimer = (time) => {
+  console.log(`Starting timer: ${time}s`);
   timer = setInterval(() => {
     if (time === 3) {
-      playAdudio("asset/countdown.mp3"); // Play warning sound at 3 seconds
+      playAdudio("asset/countdown.mp3");
     }
     if (time >= 0) {
-      progress(time); // Update progress bar
+      progress(time);
       time--;
     } else {
-      checkAnswer(); // Automatically check answer if time runs out
+      console.log("Time's up!");
+      checkAnswer();
     }
   }, 1000);
 };
@@ -138,63 +134,71 @@ const loadingAnimation = () => {
 const submitBtn = document.querySelector(".submit"),
   nextBtn = document.querySelector(".next");
 
-// Event listener for submit button
 submitBtn.addEventListener("click", () => {
+  console.log("Submit button clicked");
   checkAnswer();
 });
 
-// Event listener for next button
 nextBtn.addEventListener("click", () => {
+  console.log("Next button clicked");
   nextQuestion();
-  submitBtn.style.display = "block"; // Show submit button
-  nextBtn.style.display = "none"; // Hide next button
+  submitBtn.style.display = "block";
+  nextBtn.style.display = "none";
 });
 
 // Function to check selected answer
 const checkAnswer = () => {
-  clearInterval(timer); // Stop the timer
+  clearInterval(timer);
   const selectedAnswer = document.querySelector(".answer.selected");
 
   if (selectedAnswer) {
     const answer = selectedAnswer.querySelector(".text").innerHTML;
+    const correctAnswer = questions[currentQuestion - 1].correct_answer;
 
-    if (answer === questions[currentQuestion - 1].correct_answer) {
-      score++; // Increase score if answer is correct
-      selectedAnswer.classList.add("correct"); // Highlight correct answer
+    console.log(`User selected: ${answer}`);
+    console.log(`Correct answer: ${correctAnswer}`);
+
+    if (answer === correctAnswer) {
+      score++;
+      selectedAnswer.classList.add("correct");
+      console.log("Correct answer! Score: ", score);
     } else {
-      selectedAnswer.classList.add("wrong"); // Highlight wrong answer
-      // Show correct answer
+      selectedAnswer.classList.add("wrong");
+      console.log("Wrong answer!");
+
       document.querySelectorAll(".answer").forEach((answer) => {
-        if (answer.querySelector(".text").innerHTML === questions[currentQuestion - 1].correct_answer) {
+        if (answer.querySelector(".text").innerHTML === correctAnswer) {
           answer.classList.add("correct");
         }
       });
     }
   } else {
-    // If no answer is selected, show the correct one
+    console.log("No answer selected. Showing correct one.");
+    const correctAnswer = questions[currentQuestion - 1].correct_answer;
     document.querySelectorAll(".answer").forEach((answer) => {
-      if (answer.querySelector(".text").innerHTML === questions[currentQuestion - 1].correct_answer) {
+      if (answer.querySelector(".text").innerHTML === correctAnswer) {
         answer.classList.add("correct");
       }
     });
   }
 
-  // Mark all answers as checked to prevent multiple selections
   document.querySelectorAll(".answer").forEach((answer) => {
     answer.classList.add("checked");
   });
 
-  submitBtn.style.display = "none"; // Hide submit button
-  nextBtn.style.display = "block"; // Show next button
+  submitBtn.style.display = "none";
+  nextBtn.style.display = "block";
 };
 
 // Function to move to the next question
 const nextQuestion = () => {
   if (currentQuestion < questions.length) {
     currentQuestion++;
-    showQuestion(questions[currentQuestion - 1]); // Show next question
+    console.log(`Moving to question ${currentQuestion}`);
+    showQuestion(questions[currentQuestion - 1]);
   } else {
-    showScore(); // Show final score if all questions are answered
+    console.log("Quiz completed.");
+    showScore();
   }
 };
 
@@ -205,20 +209,23 @@ const endScreen = document.querySelector(".end-screen"),
 
 // Function to display final score
 const showScore = () => {
-  endScreen.classList.remove("hide"); // Show end screen
-  quiz.classList.add("hide"); // Hide quiz section
-  finalScore.innerHTML = score; // Display final score
-  totalScore.innerHTML = `/ ${questions.length}`; // Display total questions
+  endScreen.classList.remove("hide");
+  quiz.classList.add("hide");
+  finalScore.innerHTML = score;
+  totalScore.innerHTML = `/ ${questions.length}`;
+  console.log(`Final Score: ${score} / ${questions.length}`);
 };
 
 // Restart quiz when restart button is clicked
 const restartBtn = document.querySelector(".restart");
 restartBtn.addEventListener("click", () => {
-  window.location.reload(); // Reload the page to restart quiz
+  console.log("Quiz restarted");
+  window.location.reload();
 });
 
 // Function to play audio
 const playAdudio = (src) => {
+  console.log("Playing audio:", src);
   const audio = new Audio(src);
   audio.play();
 };
